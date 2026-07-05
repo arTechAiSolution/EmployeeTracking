@@ -1,0 +1,27 @@
+using System;
+using System.Collections.Generic;
+
+namespace PharmacyField.Core.Entities
+{
+    public class User
+    {
+        public int Id { get; set; }
+        public string EmployeeCode { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+        public string PasswordHash { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public bool IsActive { get; set; } = true;
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+        public DateTime? LastLoginAt { get; set; }
+        public string? ProfileImageUrl { get; set; }
+        
+        public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+        public virtual ICollection<AttendanceRecord> AttendanceRecords { get; set; } = new List<AttendanceRecord>();
+        public virtual ICollection<Doctor> Doctors { get; set; } = new List<Doctor>();
+        public virtual ICollection<DoctorVisit> DoctorVisits { get; set; } = new List<DoctorVisit>();
+        public virtual ICollection<LocationTrack> LocationTracks { get; set; } = new List<LocationTrack>();
+    }
+}

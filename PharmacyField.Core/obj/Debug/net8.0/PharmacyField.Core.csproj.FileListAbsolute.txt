@@ -1,0 +1,11 @@
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Core\bin\Debug\net8.0\PharmacyField.Core.deps.json
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Core\bin\Debug\net8.0\PharmacyField.Core.dll
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Core\bin\Debug\net8.0\PharmacyField.Core.pdb
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Core\obj\Debug\net8.0\PharmacyField.Core.GeneratedMSBuildEditorConfig.editorconfig
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Core\obj\Debug\net8.0\PharmacyField.Core.AssemblyInfoInputs.cache
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Core\obj\Debug\net8.0\PharmacyField.Core.AssemblyInfo.cs
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Core\obj\Debug\net8.0\PharmacyField.Core.csproj.CoreCompileInputs.cache
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Core\obj\Debug\net8.0\PharmacyField.Core.dll
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Core\obj\Debug\net8.0\refint\PharmacyField.Core.dll
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Core\obj\Debug\net8.0\PharmacyField.Core.pdb
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Core\obj\Debug\net8.0\ref\PharmacyField.Core.dll

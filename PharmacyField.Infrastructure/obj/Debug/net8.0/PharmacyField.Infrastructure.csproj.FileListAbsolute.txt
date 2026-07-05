@@ -1,0 +1,17 @@
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\bin\Debug\net8.0\PharmacyField.Infrastructure.deps.json
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\bin\Debug\net8.0\PharmacyField.Infrastructure.runtimeconfig.json
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\bin\Debug\net8.0\PharmacyField.Infrastructure.dll
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\bin\Debug\net8.0\PharmacyField.Infrastructure.pdb
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\bin\Debug\net8.0\PharmacyField.Core.dll
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\bin\Debug\net8.0\PharmacyField.Core.pdb
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\obj\Debug\net8.0\PharmacyField.Infrastructure.csproj.AssemblyReference.cache
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\obj\Debug\net8.0\PharmacyField.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\obj\Debug\net8.0\PharmacyField.Infrastructure.AssemblyInfoInputs.cache
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\obj\Debug\net8.0\PharmacyField.Infrastructure.AssemblyInfo.cs
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\obj\Debug\net8.0\PharmacyField.Infrastructure.csproj.CoreCompileInputs.cache
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\obj\Debug\net8.0\Pharmacy.CD18AD32.Up2Date
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\obj\Debug\net8.0\PharmacyField.Infrastructure.dll
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\obj\Debug\net8.0\refint\PharmacyField.Infrastructure.dll
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\obj\Debug\net8.0\PharmacyField.Infrastructure.pdb
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\obj\Debug\net8.0\PharmacyField.Infrastructure.genruntimeconfig.cache
+D:\Rushikesh\pharmacy_field_backend\PharmacyField.Infrastructure\obj\Debug\net8.0\ref\PharmacyField.Infrastructure.dll

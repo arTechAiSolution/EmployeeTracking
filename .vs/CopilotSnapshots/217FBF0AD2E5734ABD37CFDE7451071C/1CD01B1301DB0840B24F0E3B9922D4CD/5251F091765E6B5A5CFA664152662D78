@@ -1,0 +1,606 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PharmacyField.Core.DTOs;
+using PharmacyField.Core.Entities;
+using PharmacyField.Infrastructure.Data;
+using System.Security.Claims;
+
+namespace PharmacyField.API.Controllers
+{
+    [Authorize(Roles = "Admin")]
+    [ApiController]
+    [Route("api/[controller]")]
+    public class AdminController : ControllerBase
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly ILogger<AdminController> _logger;
+
+        public AdminController(ApplicationDbContext context, ILogger<AdminController> logger)
+        {
+            _context = context;
+            _logger = logger;
+        }
+
+        #region Dashboard Statistics
+
+        [HttpGet("dashboard/stats")]
+        public async Task<IActionResult> GetDashboardStats()
+        {
+            try
+            {
+                var today = DateTime.Now.Date;
+
+                var totalEmployees = await _context.Users.CountAsync();
+                var activeEmployees = await _context.Users.CountAsync(u => u.IsActive);
+                var totalDoctors = await _context.Doctors.CountAsync();
+                var visitsToday = await _context.DoctorVisits.CountAsync(v => v.VisitDate.Date == today);
+
+                var checkedIn = await _context.AttendanceRecords
+                    .CountAsync(a => a.CheckInTime.Date == today && a.Status == "CheckedIn");
+
+                var checkedOut = await _context.AttendanceRecords
+                    .CountAsync(a => a.CheckInTime.Date == today && a.Status == "CheckedOut");
+
+                var totalAttendance = await _context.AttendanceRecords
+                    .CountAsync(a => a.CheckInTime.Date == today);
+
+                var absent = totalEmployees - totalAttendance;
+
+                var avgHours = await _context.AttendanceRecords
+                    .Where(a => a.CheckInTime.Date == today && a.WorkingHours.HasValue)
+                    .AverageAsync(a => a.WorkingHours ?? 0);
+
+                var stats = new AdminDashboardStatsDto
+                {
+                    TotalEmployees = totalEmployees,
+                    ActiveEmployees = activeEmployees,
+                    TotalDoctors = totalDoctors,
+                    TotalVisitsToday = visitsToday,
+                    AttendanceSummary = new AdminAttendanceSummaryDto
+                    {
+                        TotalEmployees = totalEmployees,
+                        CheckedInToday = checkedIn,
+                        CheckedOutToday = checkedOut,
+                        AbsentToday = absent,
+                        AverageWorkingHours = Math.Round(avgHours, 2)
+                    }
+                };
+
+                return Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting dashboard stats");
+                return StatusCode(500, new { message = $"Error getting dashboard stats: {ex.Message}" });
+            }
+        }
+
+        #endregion
+
+        #region Employee Management
+
+        [HttpGet("employees")]
+        public async Task<IActionResult> GetAllEmployees()
+        {
+            try
+            {
+                var employees = await _context.Users
+                    .Select(u => new AdminEmployeeResponseDto
+                    {
+                        Id = u.Id,
+                        EmployeeCode = u.EmployeeCode,
+                        FullName = u.FullName,
+                        Email = u.Email,
+                        PhoneNumber = u.PhoneNumber ?? string.Empty,
+                        Role = u.Role,
+                        IsActive = u.IsActive,
+                        CreatedAt = u.CreatedAt,
+                        LastLoginAt = u.LastLoginAt
+                    })
+                    .OrderByDescending(u => u.CreatedAt)
+                    .ToListAsync();
+
+                return Ok(employees);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all employees");
+                return StatusCode(500, new { message = $"Error getting employees: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("employees/{id}")]
+        public async Task<IActionResult> GetEmployeeById(int id)
+        {
+            try
+            {
+                var employee = await _context.Users
+                    .Where(u => u.Id == id)
+                    .Select(u => new AdminEmployeeResponseDto
+                    {
+                        Id = u.Id,
+                        EmployeeCode = u.EmployeeCode,
+                        FullName = u.FullName,
+                        Email = u.Email,
+                        PhoneNumber = u.PhoneNumber ?? string.Empty,
+                        Role = u.Role,
+                        IsActive = u.IsActive,
+                        CreatedAt = u.CreatedAt,
+                        LastLoginAt = u.LastLoginAt
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (employee == null)
+                    return NotFound(new { message = "Employee not found" });
+
+                return Ok(employee);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting employee {id}");
+                return StatusCode(500, new { message = $"Error getting employee: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("employees/{id}")]
+        public async Task<IActionResult> UpdateEmployee(int id, [FromBody] AdminEmployeeUpdateRequestDto request)
+        {
+            try
+            {
+                var employee = await _context.Users.FindAsync(id);
+                if (employee == null)
+                    return NotFound(new { message = "Employee not found" });
+
+                if (!string.IsNullOrEmpty(request.FullName))
+                    employee.FullName = request.FullName;
+
+                if (!string.IsNullOrEmpty(request.PhoneNumber))
+                    employee.PhoneNumber = request.PhoneNumber;
+
+                if (!string.IsNullOrEmpty(request.Role))
+                    employee.Role = request.Role;
+
+                if (request.IsActive.HasValue)
+                    employee.IsActive = request.IsActive.Value;
+
+                employee.UpdatedAt = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+
+                var updated = await _context.Users
+                    .Where(u => u.Id == id)
+                    .Select(u => new AdminEmployeeResponseDto
+                    {
+                        Id = u.Id,
+                        EmployeeCode = u.EmployeeCode,
+                        FullName = u.FullName,
+                        Email = u.Email,
+                        PhoneNumber = u.PhoneNumber ?? string.Empty,
+                        Role = u.Role,
+                        IsActive = u.IsActive,
+                        CreatedAt = u.CreatedAt,
+                        LastLoginAt = u.LastLoginAt
+                    })
+                    .FirstOrDefaultAsync();
+
+                return Ok(updated);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error updating employee {id}");
+                return StatusCode(500, new { message = $"Error updating employee: {ex.Message}" });
+            }
+        }
+
+        [HttpDelete("employees/{id}")]
+        public async Task<IActionResult> DeleteEmployee(int id)
+        {
+            try
+            {
+                var employee = await _context.Users.FindAsync(id);
+                if (employee == null)
+                    return NotFound(new { message = "Employee not found" });
+
+                employee.IsActive = false;
+                employee.UpdatedAt = DateTime.Now;
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Employee deactivated successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error deleting employee {id}");
+                return StatusCode(500, new { message = $"Error deleting employee: {ex.Message}" });
+            }
+        }
+
+        [HttpDelete("employees/{id}/permanent")]
+        public async Task<IActionResult> HardDeleteEmployee(int id)
+        {
+            try
+            {
+                var employee = await _context.Users
+                    .Include(u => u.AttendanceRecords)
+                    .Include(u => u.RefreshTokens)
+                    .Include(u => u.DoctorVisits)
+                    .Include(u => u.Doctors)
+                    .Include(u => u.LocationTracks)
+                    .FirstOrDefaultAsync(u => u.Id == id);
+
+                if (employee == null)
+                    return NotFound(new { message = "Employee not found" });
+
+                if (employee.AttendanceRecords.Any() ||
+                    employee.Doctors.Any() ||
+                    employee.DoctorVisits.Any() ||
+                    employee.LocationTracks.Any())
+                {
+                    return BadRequest(new { message = "Cannot delete employee with existing records. Deactivate instead." });
+                }
+
+                _context.Users.Remove(employee);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Employee deleted permanently" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error hard deleting employee {id}");
+                return StatusCode(500, new { message = $"Error deleting employee: {ex.Message}" });
+            }
+        }
+
+        #endregion
+
+        #region Location Tracking
+
+        [HttpGet("locations")]
+        public async Task<IActionResult> GetEmployeeLocations()
+        {
+            try
+            {
+                var latestLocations = await _context.LocationTracks
+                    .GroupBy(l => l.UserId)
+                    .Select(g => g.OrderByDescending(l => l.Timestamp).FirstOrDefault())
+                    .Where(l => l != null)
+                    .Include(l => l.User)
+                    .ToListAsync();
+
+                if (latestLocations == null || !latestLocations.Any())
+                    return Ok(new List<AdminEmployeeLocationDto>());
+
+                var result = latestLocations
+                    .Where(l => l != null)
+                    .Select(l => new AdminEmployeeLocationDto
+                    {
+                        UserId = l.UserId,
+                        FullName = l.User?.FullName ?? "Unknown",
+                        Email = l.User?.Email,
+                        Latitude = l.Latitude,
+                        Longitude = l.Longitude,
+                        Address = $"{l.Latitude}, {l.Longitude}",
+                        Timestamp = l.Timestamp
+                    })
+                    .ToList();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting employee locations");
+                return StatusCode(500, new { message = $"Error getting locations: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("locations/employee/{userId}")]
+        public async Task<IActionResult> GetEmployeeLocationHistory(int userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+        {
+            try
+            {
+                var locations = await _context.LocationTracks
+                    .Where(l => l.UserId == userId)
+                    .OrderByDescending(l => l.Timestamp)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                var totalCount = await _context.LocationTracks.CountAsync(l => l.UserId == userId);
+
+                return Ok(new
+                {
+                    data = locations.Select(l => new
+                    {
+                        l.Id,
+                        l.Latitude,
+                        l.Longitude,
+                        l.Timestamp,
+                        l.Altitude,
+                        l.Speed,
+                        l.Accuracy
+                    }),
+                    total = totalCount,
+                    page,
+                    pageSize,
+                    totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting location history for user {userId}");
+                return StatusCode(500, new { message = $"Error getting location history: {ex.Message}" });
+            }
+        }
+
+        #endregion
+
+        #region Attendance Management
+
+        [HttpGet("attendance/summary")]
+        public async Task<IActionResult> GetAttendanceSummary([FromQuery] DateTime? date)
+        {
+            try
+            {
+                var targetDate = date ?? DateTime.Now.Date;
+                var totalEmployees = await _context.Users.CountAsync();
+
+                var attendanceRecords = await _context.AttendanceRecords
+                    .Where(a => a.CheckInTime.Date == targetDate)
+                    .ToListAsync();
+
+                var checkedIn = attendanceRecords.Count(a => a.Status == "CheckedIn");
+                var checkedOut = attendanceRecords.Count(a => a.Status == "CheckedOut");
+                var totalAttendance = attendanceRecords.Count;
+                var absent = totalEmployees - totalAttendance;
+
+                var avgHours = attendanceRecords
+                    .Where(a => a.WorkingHours.HasValue)
+                    .Select(a => a.WorkingHours ?? 0)
+                    .DefaultIfEmpty(0)
+                    .Average();
+
+                return Ok(new AdminAttendanceSummaryDto
+                {
+                    TotalEmployees = totalEmployees,
+                    CheckedInToday = checkedIn,
+                    CheckedOutToday = checkedOut,
+                    AbsentToday = absent,
+                    AverageWorkingHours = Math.Round(avgHours, 2)
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting attendance summary");
+                return StatusCode(500, new { message = $"Error getting attendance summary: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("attendance/records")]
+        public async Task<IActionResult> GetAttendanceRecords([FromQuery] DateTime? date, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var targetDate = date ?? DateTime.Now.Date;
+
+                var query = _context.AttendanceRecords
+                    .Include(a => a.User)
+                    .Where(a => a.CheckInTime.Date == targetDate);
+
+                var totalCount = await query.CountAsync();
+
+                var records = await query
+                    .OrderByDescending(a => a.CheckInTime)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(a => new AdminAttendanceRecordDto
+                    {
+                        Id = a.Id,
+                        UserId = a.UserId,
+                        FullName = a.User.FullName,
+                        EmployeeCode = a.User.EmployeeCode,
+                        CheckInTime = a.CheckInTime,
+                        CheckOutTime = a.CheckOutTime,
+                        Status = a.Status,
+                        WorkingHours = a.WorkingHours,
+                        CheckInAddress = a.CheckInAddress,
+                        CheckOutAddress = a.CheckOutAddress,
+                        HasSelfie = !string.IsNullOrEmpty(a.SelfieBase64)
+                    })
+                    .ToListAsync();
+
+                return Ok(new
+                {
+                    data = records,
+                    total = totalCount,
+                    page,
+                    pageSize,
+                    totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting attendance records");
+                return StatusCode(500, new { message = $"Error getting attendance records: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("attendance/employee/{userId}")]
+        public async Task<IActionResult> GetEmployeeAttendance(int userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var query = _context.AttendanceRecords
+                    .Where(a => a.UserId == userId)
+                    .OrderByDescending(a => a.CheckInTime);
+
+                var totalCount = await query.CountAsync();
+
+                var records = await query
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(a => new
+                    {
+                        a.Id,
+                        a.CheckInTime,
+                        a.CheckOutTime,
+                        a.Status,
+                        a.WorkingHours,
+                        a.CheckInAddress,
+                        a.CheckOutAddress,
+                        a.Notes,
+                        HasSelfie = !string.IsNullOrEmpty(a.SelfieBase64)
+                    })
+                    .ToListAsync();
+
+                return Ok(new
+                {
+                    data = records,
+                    total = totalCount,
+                    page,
+                    pageSize,
+                    totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting attendance for user {userId}");
+                return StatusCode(500, new { message = $"Error getting employee attendance: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("attendance/selfie/{attendanceId}")]
+        public async Task<IActionResult> GetAttendanceSelfie(int attendanceId)
+        {
+            try
+            {
+                var attendance = await _context.AttendanceRecords
+                    .FirstOrDefaultAsync(a => a.Id == attendanceId);
+
+                if (attendance == null)
+                    return NotFound(new { message = "Attendance record not found" });
+
+                if (string.IsNullOrEmpty(attendance.SelfieBase64))
+                    return NotFound(new { message = "No selfie found for this attendance" });
+
+                return Ok(new
+                {
+                    selfie = attendance.SelfieBase64,
+                    userId = attendance.UserId,
+                    checkInTime = attendance.CheckInTime
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting selfie for attendance {attendanceId}");
+                return StatusCode(500, new { message = $"Error getting selfie: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("attendance/today-summary")]
+        public async Task<IActionResult> GetTodayAttendanceSummary()
+        {
+            try
+            {
+                var today = DateTime.Now.Date;
+
+                var allEmployees = await _context.Users
+                    .Select(u => new { u.Id, u.FullName, u.EmployeeCode })
+                    .ToListAsync();
+
+                var todayAttendance = await _context.AttendanceRecords
+                    .Where(a => a.CheckInTime.Date == today)
+                    .Include(a => a.User)
+                    .ToListAsync();
+
+                var result = allEmployees.Select(e => new
+                {
+                    e.Id,
+                    e.FullName,
+                    e.EmployeeCode,
+                    Status = todayAttendance.FirstOrDefault(a => a.UserId == e.Id)?.Status ?? "Absent",
+                    CheckInTime = todayAttendance.FirstOrDefault(a => a.UserId == e.Id)?.CheckInTime,
+                    CheckOutTime = todayAttendance.FirstOrDefault(a => a.UserId == e.Id)?.CheckOutTime,
+                    WorkingHours = todayAttendance.FirstOrDefault(a => a.UserId == e.Id)?.WorkingHours ?? 0
+                }).ToList();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting today's attendance summary");
+                return StatusCode(500, new { message = $"Error getting attendance summary: {ex.Message}" });
+            }
+        }
+
+        #endregion
+
+        #region Activity Log
+
+        [HttpGet("activity/recent")]
+        public async Task<IActionResult> GetRecentActivity([FromQuery] int limit = 20)
+        {
+            try
+            {
+                var checkins = await _context.AttendanceRecords
+                    .Include(a => a.User)
+                    .OrderByDescending(a => a.CheckInTime)
+                    .Take(limit / 2)
+                    .Select(a => new
+                    {
+                        a.Id,
+                        UserName = a.User.FullName,
+                        Activity = "Check In",
+                        Time = a.CheckInTime,
+                        Details = $"Checked in at {a.CheckInTime:t}"
+                    })
+                    .ToListAsync();
+
+                var checkouts = await _context.AttendanceRecords
+                    .Where(a => a.CheckOutTime != null)
+                    .Include(a => a.User)
+                    .OrderByDescending(a => a.CheckOutTime)
+                    .Take(limit / 2)
+                    .Select(a => new
+                    {
+                        a.Id,
+                        UserName = a.User.FullName,
+                        Activity = "Check Out",
+                        Time = a.CheckOutTime ?? DateTime.Now,
+                        Details = $"Checked out at {a.CheckOutTime:t}"
+                    })
+                    .ToListAsync();
+
+                var visits = await _context.DoctorVisits
+                    .Include(v => v.User)
+                    .Include(v => v.Doctor)
+                    .OrderByDescending(v => v.VisitDate)
+                    .Take(limit / 2)
+                    .Select(v => new
+                    {
+                        v.Id,
+                        UserName = v.User.FullName,
+                        Activity = "Visit",
+                        Time = v.VisitDate,
+                        Details = $"Visited {v.Doctor.DoctorName}"
+                    })
+                    .ToListAsync();
+
+                var allActivities = checkins.Cast<object>()
+                    .Concat(checkouts)
+                    .Concat(visits)
+                    .OrderByDescending(a => ((dynamic)a).Time)
+                    .Take(limit)
+                    .ToList();
+
+                return Ok(allActivities);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting recent activity");
+                return StatusCode(500, new { message = $"Error getting activity: {ex.Message}" });
+            }
+        }
+
+        #endregion
+    }
+}

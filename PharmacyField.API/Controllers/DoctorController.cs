@@ -1,0 +1,145 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PharmacyField.Core.DTOs;
+using PharmacyField.Core.Entities;
+using PharmacyField.Infrastructure.Data;
+using System.Security.Claims;
+
+namespace PharmacyField.API.Controllers
+{
+    [Authorize]
+    [ApiController]
+    [Route("api/[controller]")]
+    public class DoctorController : ControllerBase
+    {
+        private readonly ApplicationDbContext _context;
+        
+        public DoctorController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+        
+        private int GetUserId()
+        {
+            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        }
+        
+        [HttpPost]
+        public async Task<IActionResult> AddDoctor([FromBody] DoctorRequestDto request)
+        {
+            var doctor = new Doctor
+            {
+                UserId = GetUserId(),
+                DoctorName = request.DoctorName,
+                Specialization = request.Specialization,
+                PhoneNumber = request.PhoneNumber,
+                Email = request.Email,
+                ClinicName = request.ClinicName,
+                ClinicAddress = request.ClinicAddress,
+                Latitude = request.Latitude,
+                Longitude = request.Longitude,
+                VisitFrequency = request.VisitFrequency,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            
+            await _context.Doctors.AddAsync(doctor);
+            await _context.SaveChangesAsync();
+            
+            return Ok(new DoctorResponseDto
+            {
+                Id = doctor.Id,
+                DoctorName = doctor.DoctorName,
+                Specialization = doctor.Specialization,
+                PhoneNumber = doctor.PhoneNumber,
+                Email = doctor.Email,
+                ClinicName = doctor.ClinicName,
+                ClinicAddress = doctor.ClinicAddress,
+                VisitFrequency = doctor.VisitFrequency
+            });
+        }
+        
+        [HttpGet]
+        public async Task<IActionResult> GetDoctors([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            var userId = GetUserId();
+            
+            var doctors = await _context.Doctors
+                .Where(d => d.UserId == userId)
+                .OrderByDescending(d => d.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(d => new DoctorResponseDto
+                {
+                    Id = d.Id,
+                    DoctorName = d.DoctorName,
+                    Specialization = d.Specialization,
+                    PhoneNumber = d.PhoneNumber,
+                    Email = d.Email,
+                    ClinicName = d.ClinicName,
+                    ClinicAddress = d.ClinicAddress,
+                    VisitFrequency = d.VisitFrequency
+                })
+                .ToListAsync();
+                
+            return Ok(doctors);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetDoctorById(int id)
+        {
+            var userId = GetUserId();
+
+            var doctor = await _context.Doctors
+                .Where(d => d.Id == id && d.UserId == userId)
+                .Select(d => new DoctorResponseDto
+                {
+                    Id = d.Id,
+                    DoctorName = d.DoctorName,
+                    Specialization = d.Specialization,
+                    PhoneNumber = d.PhoneNumber,
+                    Email = d.Email,
+                    ClinicName = d.ClinicName,
+                    ClinicAddress = d.ClinicAddress,
+                    VisitFrequency = d.VisitFrequency,
+                    Latitude = d.Latitude,
+                    Longitude = d.Longitude,
+                    TotalVisits = d.DoctorVisits.Count()
+                })
+                .FirstOrDefaultAsync();
+
+            if (doctor == null)
+                return NotFound(new { message = "Doctor not found" });
+
+            return Ok(doctor);
+        }
+        
+        [HttpPost("visit")]
+        public async Task<IActionResult> AddVisit([FromBody] DoctorVisitRequestDto request)
+        {
+            var visit = new DoctorVisit
+            {
+                DoctorId = request.DoctorId,
+                UserId = GetUserId(),
+                VisitDate = DateTime.UtcNow,
+                VisitType = request.VisitType,
+                Purpose = request.Purpose,
+                Notes = request.Notes,
+                SamplesGiven = request.SamplesGiven,
+                SamplesDescription = request.SamplesDescription,
+                OrderTaken = request.OrderTaken,
+                OrderAmount = request.OrderAmount,
+                Latitude = request.Latitude,
+                Longitude = request.Longitude,
+                Status = "Completed",
+                CreatedAt = DateTime.UtcNow
+            };
+            
+            await _context.DoctorVisits.AddAsync(visit);
+            await _context.SaveChangesAsync();
+            
+            return Ok(new { message = "Visit recorded successfully", visitId = visit.Id });
+        }
+    }
+}

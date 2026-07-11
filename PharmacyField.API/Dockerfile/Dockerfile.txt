@@ -1,12 +1,17 @@
+# Build stage
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
+# Copy everything
 COPY . .
 
-WORKDIR /src/PharmacyField.API
-RUN dotnet restore
-RUN dotnet publish -c Release -o /app/publish
+# Restore solution
+RUN dotnet restore PharmacyField.sln
 
+# Publish API
+RUN dotnet publish PharmacyField.API/PharmacyField.API.csproj -c Release -o /app/publish
+
+# Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 

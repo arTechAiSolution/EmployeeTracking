@@ -70,21 +70,38 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
-
 // Configure pipeline
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
-app.UseHttpsRedirection();
+// Enable Swagger in both Development and Production
+app.UseSwagger();
+app.UseSwaggerUI();
 
-// CORS must be between UseRouting and UseAuthorization
+// Comment this temporarily for Railway
+// app.UseHttpsRedirection();
+
 app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();
+
+// Configure pipeline
+//if (app.Environment.IsDevelopment())
+//{
+//    app.UseSwagger();
+//    app.UseSwaggerUI();
+//}
+
+//app.UseHttpsRedirection();
+
+//// CORS must be between UseRouting and UseAuthorization
+//app.UseCors("AllowAll");
+
+//app.UseAuthentication();
+//app.UseAuthorization();
+//app.MapControllers();
+
+//app.Run();

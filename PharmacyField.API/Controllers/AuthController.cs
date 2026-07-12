@@ -8,6 +8,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using PharmacyField.Infrastructure.Utils;
 
 namespace PharmacyField.API.Controllers
 {
@@ -30,8 +31,7 @@ namespace PharmacyField.API.Controllers
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Email == request.Email && u.IsActive);
 
-            // TEMPORARY FIX: Plain text password comparison
-            if (user == null || request.Password != user.PasswordHash)
+            if (user == null || !PasswordHelper.VerifyPassword(user.PasswordHash, request.Password))
                 return Unauthorized(new { message = "Invalid email or password" });
 
             user.LastLoginAt = DateTime.UtcNow;

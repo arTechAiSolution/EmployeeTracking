@@ -48,6 +48,17 @@ namespace PharmacyField.Core.DTOs
         public string? ProfileImageUrl { get; set; }
     }
 
+    // Admin Employee Create Request
+    public class AdminEmployeeCreateRequestDto
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? PhoneNumber { get; set; }
+        public string Role { get; set; } = "Employee";
+        public string Password { get; set; } = string.Empty;
+        public string? ProfileImageUrl { get; set; }
+    }
+
     // Admin Employee Location Response
     public class AdminEmployeeLocationDto
     {

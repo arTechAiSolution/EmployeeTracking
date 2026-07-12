@@ -78,6 +78,59 @@ namespace PharmacyField.API.Controllers
 
         #endregion
 
+        [HttpPost("employees")]
+        public async Task<IActionResult> CreateEmployee([FromBody] AdminEmployeeCreateRequestDto request)
+        {
+            try
+            {
+                // basic validation
+                if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.FullName) || string.IsNullOrWhiteSpace(request.Password))
+                    return BadRequest(new { message = "FullName, Email and Password are required" });
+
+                // check unique email
+                if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+                    return BadRequest(new { message = "Email already in use" });
+
+                // generate unique employee code
+                var employeeCode = "EMP" + DateTime.UtcNow.Ticks.ToString().Substring(5);
+
+                var user = new User
+                {
+                    EmployeeCode = employeeCode,
+                    FullName = request.FullName,
+                    Email = request.Email,
+                    PhoneNumber = request.PhoneNumber ?? string.Empty,
+                    Role = request.Role ?? "Employee",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    ProfileImageUrl = request.ProfileImageUrl,
+                    PasswordHash = PharmacyField.Infrastructure.Utils.PasswordHelper.HashPassword(request.Password)
+                };
+
+                await _context.Users.AddAsync(user);
+                await _context.SaveChangesAsync();
+
+                return Ok(new AdminEmployeeResponseDto
+                {
+                    Id = user.Id,
+                    EmployeeCode = user.EmployeeCode,
+                    FullName = user.FullName,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    Role = user.Role,
+                    IsActive = user.IsActive,
+                    CreatedAt = user.CreatedAt,
+                    LastLoginAt = user.LastLoginAt
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating employee");
+                return StatusCode(500, new { message = $"Error creating employee: {ex.Message}" });
+            }
+        }
+
         #region Doctors (Admin)
 
         [HttpGet("doctors")]

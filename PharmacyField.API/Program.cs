@@ -97,11 +97,11 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Auto-apply EF Core migrations on startup (creates all tables if they don't exist)
+// Auto-apply EF Core migrations and seed default admin user on startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.Migrate();
+    await DbInitializer.SeedAsync(db);
 }
 
 // Configure pipeline
